@@ -43,11 +43,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <input
+        id={name}
         type={type}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
@@ -74,11 +75,12 @@ function TextAreaField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
         {label}
         <span className="text-red-500 ml-1">*</span>
       </label>
       <textarea
+        id={name}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
         placeholder={placeholder}
