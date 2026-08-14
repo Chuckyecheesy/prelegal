@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { NdaFormData } from "@/types/nda";
 import { fillTemplate } from "@/lib/fillTemplate";
@@ -14,14 +14,16 @@ interface Props {
 export default function NdaPreview({ template, data, onBack }: Props) {
   const documentRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const filled = fillTemplate(template, data);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const filled = useMemo(() => fillTemplate(template, data), [template, data]);
 
   const handleDownload = async () => {
     if (!documentRef.current || isDownloading) return;
     setIsDownloading(true);
+    setDownloadError(null);
 
     try {
-      const { default: html2canvas } = await import("html2canvas");
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { default: jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(documentRef.current, {
@@ -43,12 +45,20 @@ export default function NdaPreview({ template, data, onBack }: Props) {
       let isFirstPage = true;
 
       while (pageTop < canvas.height) {
+        const remainingHeight = canvas.height - pageTop;
+        const sliceHeight = Math.min(pxPerPage, remainingHeight);
+        const minimumSliceHeight = 0.05 * pxPerPage;
+
+        if (pageTop > 0 && sliceHeight < minimumSliceHeight) {
+          break;
+        }
+
         if (!isFirstPage) pdf.addPage();
 
         // Slice only the pixels that belong on this page
         const sliceCanvas = document.createElement("canvas");
         sliceCanvas.width = canvas.width;
-        sliceCanvas.height = Math.min(pxPerPage, canvas.height - pageTop);
+        sliceCanvas.height = sliceHeight;
         sliceCanvas
           .getContext("2d")!
           .drawImage(
@@ -63,14 +73,14 @@ export default function NdaPreview({ template, data, onBack }: Props) {
             sliceCanvas.height
           );
 
-        const sliceHeight = (sliceCanvas.height * printWidth) / canvas.width;
+        const renderedHeight = (sliceCanvas.height * printWidth) / canvas.width;
         pdf.addImage(
           sliceCanvas.toDataURL("image/png"),
           "PNG",
           margin,
           margin,
           printWidth,
-          sliceHeight
+          renderedHeight
         );
 
         pageTop += pxPerPage;
@@ -78,9 +88,12 @@ export default function NdaPreview({ template, data, onBack }: Props) {
       }
 
       const filename = `Mutual-NDA-${data.partyAName}-${data.partyBName}`
-        .replace(/[^a-zA-Z0-9-]/g, "_")
+        .replace(/[^\p{L}\p{N}-]/gu, "_")
         .slice(0, 80);
       pdf.save(`${filename}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed", err);
+      setDownloadError("Failed to generate PDF. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -88,6 +101,12 @@ export default function NdaPreview({ template, data, onBack }: Props) {
 
   return (
     <div className="space-y-6">
+      {downloadError && (
+        <p role="alert" className="text-sm text-red-600">
+          {downloadError}
+        </p>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <button

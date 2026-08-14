@@ -125,6 +125,14 @@ describe("fillTemplate", () => {
       expect(result).toContain("60");
       expect(result).not.toContain("[30]");
     });
+
+    it("[3] placeholder does not corrupt [30] — cross-contamination guard", () => {
+      const data = { ...BASE_DATA, confidentialityTerm: "5", disputeNoticeDays: "30" };
+      const result = fillTemplate(MINIMAL_TEMPLATE, data);
+      // [30] → "30 days", not "50 days" or "3 0 days"
+      expect(result).toContain("30");
+      expect(result).not.toContain("50");
+    });
   });
 
   describe("Date formatting", () => {

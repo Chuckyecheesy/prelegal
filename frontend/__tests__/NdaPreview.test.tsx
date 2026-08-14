@@ -15,7 +15,7 @@ const pdfMock = {
   save: vi.fn(),
 };
 
-vi.mock("html2canvas", () => ({
+vi.mock("html2canvas-pro", () => ({
   default: vi.fn().mockResolvedValue({ width: 800, height: 1200 }),
 }));
 vi.mock("jspdf", () => ({
@@ -108,6 +108,65 @@ describe("NdaPreview", () => {
       await user.click(btn);
       await screen.findByRole("button", { name: /Download PDF/i });
       expect(btn).not.toBeDisabled();
+    });
+
+    it("uses a Unicode-aware filename for non-ASCII party names", async () => {
+      const user = userEvent.setup();
+      render(
+        <NdaPreview
+          template={TEMPLATE}
+          data={{ ...DATA, partyAName: "Müller GmbH & Co. KG", partyBName: "Björk & Sons" }}
+          onBack={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+      await screen.findByRole("button", { name: /Download PDF/i });
+
+      expect(pdfMock.save).toHaveBeenCalledWith(
+        expect.stringMatching(/Mutual-NDA-Müller.*\.pdf$/u)
+      );
+      expect(pdfMock.save.mock.calls[0][0]).not.toContain("____");
+    });
+
+    it("skips a near-empty trailing page when the remaining slice is tiny", async () => {
+      const user = userEvent.setup();
+      const { default: html2canvas } = await import("html2canvas-pro");
+      (html2canvas as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ width: 800, height: 1200 });
+
+      render(<NdaPreview template={TEMPLATE} data={DATA} onBack={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+      await screen.findByRole("button", { name: /Download PDF/i });
+
+      expect(pdfMock.addPage).not.toHaveBeenCalled();
+    });
+
+    it("shows an error message when html2canvas rejects", async () => {
+      const { default: html2canvas } = await import("html2canvas-pro");
+      (html2canvas as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error("canvas error")
+      );
+      const user = userEvent.setup();
+      render(<NdaPreview template={TEMPLATE} data={DATA} onBack={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /Failed to generate PDF/i
+      );
+      expect(screen.getByRole("button", { name: /Download PDF/i })).not.toBeDisabled();
+    });
+
+    it("clears the error message on a subsequent download attempt", async () => {
+      const { default: html2canvas } = await import("html2canvas-pro");
+      (html2canvas as ReturnType<typeof vi.fn>)
+        .mockRejectedValueOnce(new Error("canvas error"))
+        .mockResolvedValueOnce({ width: 800, height: 1200 });
+      const user = userEvent.setup();
+      render(<NdaPreview template={TEMPLATE} data={DATA} onBack={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+      await screen.findByRole("alert");
+      await user.click(screen.getByRole("button", { name: /Download PDF/i }));
+      await screen.findByRole("button", { name: /Download PDF/i });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
 });

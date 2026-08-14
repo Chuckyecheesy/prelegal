@@ -102,13 +102,13 @@ Any dispute arising out of or relating to this Agreement shall first be subject 
 
 IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
 
-Disclosing Party: [Full Legal Name]
+Disclosing Party: [Full Legal Name of Party A]
 By: ______________________________
 Name: ____________________________
 Title: _____________________________
 Date: _____________________________
 
-Receiving Party: [Full Legal Name]
+Receiving Party: [Full Legal Name of Party B]
 By: ______________________________
 Name: ____________________________
 Title: _____________________________

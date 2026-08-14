@@ -42,12 +42,12 @@ function formatDate(isoDate: string): string {
 
 export function fillTemplate(template: string, data: NdaFormData): string {
   const filled = template
-    .replace("[Full Legal Name of Party A]", data.partyAName)
-    .replace("[Party A Street Address]", data.partyAAddress)
-    .replace("[Party A Email Address]", data.partyAEmail)
-    .replace("[Full Legal Name of Party B]", data.partyBName)
-    .replace("[Party B Street Address]", data.partyBAddress)
-    .replace("[Party B Email Address]", data.partyBEmail)
+    .replaceAll("[Full Legal Name of Party A]", data.partyAName)
+    .replaceAll("[Party A Street Address]", data.partyAAddress)
+    .replaceAll("[Party A Email Address]", data.partyAEmail)
+    .replaceAll("[Full Legal Name of Party B]", data.partyBName)
+    .replaceAll("[Party B Street Address]", data.partyBAddress)
+    .replaceAll("[Party B Email Address]", data.partyBEmail)
     .replace(
       "[brief description of business purpose or project]",
       data.businessPurpose
@@ -55,9 +55,9 @@ export function fillTemplate(template: string, data: NdaFormData): string {
     .replace("[Insert date]", formatDate(data.effectiveDate))
     .replace("[State]", data.governingState)
     .replace("[County, State]", data.disputeCountyState)
-    .replace("[30]", data.disputeNoticeDays)
-    // Confidentiality term appears twice in the template
-    .replaceAll("[3]", data.confidentialityTerm);
+    // Regex anchors prevent [3] from matching inside [30] or other [3x] tokens
+    .replace(/\[30\]/g, data.disputeNoticeDays)
+    .replace(/\[3\]/g, data.confidentialityTerm);
 
   return filled + SIGNATURE_BLOCK;
 }

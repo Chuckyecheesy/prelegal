@@ -30,58 +30,42 @@ Template moved to `frontend/templates/Mutual-NDA.md` (no `..` path) and read in 
 
 ## Medium
 
-### 3. `handleDownload` swallows errors silently — no user feedback on failure
+### ~~3. `handleDownload` swallows errors silently — no user feedback on failure~~ ✅ Fixed
 
 **File:** `components/NdaPreview.tsx` · lines 19–86
 
 The `try/finally` block re-enables the button but has no `catch`. Any failure from `html2canvas` (CORS error, DOM exception) or the dynamic `import()` calls is swallowed, leaving the user no indication that PDF generation failed.
 
-**Fix:**
-```ts
-} catch (err) {
-  console.error("PDF generation failed", err);
-  setDownloadError("Failed to generate PDF. Please try again.");
-} finally {
-  setIsDownloading(false);
-}
-```
-
+**Resolution:** Added `downloadError` state, a `catch` block that sets it with a user-facing message (and logs to console), and a `role="alert"` paragraph in the toolbar that renders when the error is set. Error clears on the next download attempt. Two new tests cover the failure and recovery paths.1
 ---
 
-### 4. `today` is computed at module load time, not render time
+### ~~4. `today` is computed at module load time, not render time~~ ✅ Fixed
 
 **File:** `components/NdaForm.tsx` · line 10
 
 `const today = new Date().toISOString().split("T")[0]` is declared at module scope. On a long-running server, this value becomes stale; a server that starts before midnight UTC and serves a client after midnight will pre-fill yesterday's date.
 
-**Fix:** Initialize inside `useState` with a lazy initializer:
-```ts
-const [form, setForm] = useState<NdaFormData>(() => ({
-  ...INITIAL,
-  effectiveDate: new Date().toISOString().split("T")[0],
-}));
-```
-Remove `effectiveDate` from the module-level `INITIAL` constant.
+**Resolution:** Removed the module-level `today` constant and `effectiveDate` from `INITIAL` (typed as `Omit<NdaFormData, "effectiveDate">`). `useState` now uses a lazy initializer that computes the date fresh on every component mount.
 
 ---
 
-### 5. `TextAreaField` always renders as `required` — no way to make it optional
+### ~~5. `TextAreaField` always renders as `required` — no way to make it optional~~ ✅ Fixed
 
 **File:** `components/NdaForm.tsx` · lines 62–91
 
 `TextAreaField` hardcodes `required` on the `<textarea>` with no prop to override it, unlike `Field` which accepts `required?: boolean`. The two components could be unified into a single `Field` that conditionally renders `<input>` or `<textarea>` based on a `multiline` prop.
 
-**Fix (minimal):** Add `required?: boolean` to `TextAreaField` and thread it through.
+**Resolution:** Added `required?: boolean` (default `true`) to `TextAreaField`'s props and type definition. The asterisk label indicator and the `required` attribute on `<textarea>` are now both conditional on the prop value, matching `Field`'s existing behaviour.
 
 ---
 
-### 6. Placeholder-ordering test gives false confidence — cross-contamination case not exercised
+### ~~6. Placeholder-ordering test gives false confidence — cross-contamination case not exercised~~ ✅ Fixed
 
 **File:** `__tests__/fillTemplate.test.ts` · line 110
 
 The tests verify `[3]` and `[30]` separately but never together with a non-default `disputeNoticeDays`. The `MINIMAL_TEMPLATE` places `[30]` before `[3]`, matching the current chain order, so the latent bug (issue #1) is not caught.
 
-**Fix:** Add a test where `confidentialityTerm: "5"` and `disputeNoticeDays: "30"` are set simultaneously, asserting the output contains `"30 days"` (not `"50 days"`).
+**Resolution:** Added "`[3]` placeholder does not corrupt `[30]` — cross-contamination guard" test (line 129) setting `confidentialityTerm: "5"` and `disputeNoticeDays: "30"` simultaneously and asserting the output does not contain `"50"`.
 
 ---
 

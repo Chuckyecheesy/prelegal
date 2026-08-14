@@ -7,9 +7,7 @@ interface Props {
   onSubmit: (data: NdaFormData) => void;
 }
 
-const today = new Date().toISOString().split("T")[0];
-
-const INITIAL: NdaFormData = {
+const INITIAL: Omit<NdaFormData, "effectiveDate"> = {
   partyAName: "",
   partyAAddress: "",
   partyAEmail: "",
@@ -17,7 +15,6 @@ const INITIAL: NdaFormData = {
   partyBAddress: "",
   partyBEmail: "",
   businessPurpose: "",
-  effectiveDate: today,
   governingState: "",
   confidentialityTerm: "3",
   disputeCountyState: "",
@@ -66,25 +63,27 @@ function TextAreaField({
   value,
   onChange,
   placeholder,
+  required = true,
 }: {
   label: string;
   name: keyof NdaFormData;
   value: string;
   onChange: (name: keyof NdaFormData, value: string) => void;
   placeholder?: string;
+  required?: boolean;
 }) {
   return (
     <div>
       <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
         {label}
-        <span className="text-red-500 ml-1">*</span>
+        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <textarea
         id={name}
         value={value}
         onChange={(e) => onChange(name, e.target.value)}
         placeholder={placeholder}
-        required
+        required={required}
         rows={3}
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
       />
@@ -93,7 +92,10 @@ function TextAreaField({
 }
 
 export default function NdaForm({ onSubmit }: Props) {
-  const [form, setForm] = useState<NdaFormData>(INITIAL);
+  const [form, setForm] = useState<NdaFormData>(() => ({
+    ...INITIAL,
+    effectiveDate: new Date().toISOString().split("T")[0],
+  }));
 
   const handleChange = (name: keyof NdaFormData, value: string) => {
     setForm((prev) => ({ ...prev, [name]: value }));
