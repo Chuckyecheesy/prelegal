@@ -250,3 +250,62 @@ A single Unicode-aware regex (matching the fix already proposed for `CODE_REVIEW
 ## Summary
 
 These changes collectively fix four independent bugs — a silent data-corruption bug in placeholder substitution, a stale-closure bug in date initialisation, a swallowed-error bug in PDF generation, and a filename-mangling regex bug found via e2e testing — plus a missing-prop inconsistency between two sibling components and a regression test to lock in the placeholder fix. The production fixes are all backward-compatible: defaults preserve existing behaviour, and the `Omit` type on `INITIAL` adds a compile-time guard that would catch any future attempt to re-introduce a module-level date default.
+
+---
+
+# KAN-4 — V1 Project Foundation
+
+**Branch:** `kan-4-v1-foundation`
+**Date:** 2026-08-14
+**Scope:** New `backend/` service, Docker packaging, start/stop scripts, and a login-gated frontend route — no changes to the NDA Creator feature logic itself.
+
+## New backend (`backend/`)
+
+A `uv`-managed FastAPI project, added as the technical foundation for the eventual API surface:
+
+- **`app/main.py`** — FastAPI app with a `lifespan` hook that resets the database on every process startup, CORS open to `http://localhost:3000`, and a single `GET /api/health` endpoint that runs `SELECT 1` against the SQLite connection to prove the DB is reachable.
+- **`app/db.py`** — `reset_db()` deletes any existing `prelegal.db` file (`missing_ok=True`, so it's safe on first boot too) and recreates it empty. Per the project's target architecture, the database has **no persistence across restarts and no migrations** — every startup begins from a clean file.
+- **`tests/test_health.py`** — pytest + `TestClient`, asserts `/api/health` returns `{"status": "ok"}`.
+
+No business/domain endpoints were added — the ticket explicitly scoped this to foundation work, not the product feature.
+
+## Login-gated routing (`frontend/`)
+
+**What changed:** `app/page.tsx` no longer renders the NDA Creator directly. It now renders a new `components/LoginScreen.tsx` — an email/password form with **no real authentication or validation** — whose submit handler calls `router.push("/platform")`. The NDA Creator's original content (template read + `NdaCreator`) moved unchanged into a new `app/platform/page.tsx`.
+
+```diff
+  // app/page.tsx
+- import fs from "fs";
+- import path from "path";
+- import NdaCreator from "@/components/NdaCreator";
+- const TEMPLATE: string = (() => { ... })();
+- export default function Home() {
+-   return <main>...<NdaCreator template={template} /></main>;
+- }
++ import LoginScreen from "@/components/LoginScreen";
++ export default function Home() {
++   return <LoginScreen />;
++ }
+```
+
+**Why it matters:** The ticket (KAN-4) asks for "a fake login screen for now; no authentication, just bring the user to the platform." The template-reading `path.join(process.cwd(), "templates", "Mutual-NDA.md")` IIFE moved verbatim into `app/platform/page.tsx` — `process.cwd()` resolves relative to the Next.js process root (`frontend/`) regardless of which route file contains it, so this is not a regression of the frontend/root template-duplication behavior documented earlier in this repo's `CLAUDE.md`.
+
+`components/LoginScreen.tsx` is a client component (`"use client"`) since `useRouter()` from `next/navigation` only works in Client Components — a Server Component can't call it from an event handler.
+
+## Docker packaging
+
+- **`backend/Dockerfile`** — `python:3.13-slim` base, installs `uv` via `COPY --from=ghcr.io/astral-sh/uv:latest`, `uv sync --frozen --no-dev`, runs `uvicorn app.main:app` on port 8000.
+- **`frontend/Dockerfile`** — `node:22-slim`, `npm ci`, `npm run build`, runs `npm start` on port 3000.
+- **`docker-compose.yml`** (repo root) — wires `backend` and `frontend` as two separate services/containers (not a single statically-served process — CLAUDE.md only says to "consider" that, and keeping them separate avoids coupling Next's build output into FastAPI's static file serving this early).
+
+## Start/stop scripts (`scripts/`)
+
+`start-mac.sh` / `start-linux.sh` run `docker compose up -d --build`; `stop-mac.sh` / `stop-linux.sh` run `docker compose down`. Both `cd` to the repo root first so they work regardless of the caller's working directory.
+
+## Verification
+
+- `npm test` — 52/52 tests pass, including new `__tests__/LoginScreen.test.tsx` (renders email/password/Continue; submit navigates to `/platform` without validating input).
+- `npm run lint` / `npm run build` — clean; `/` and `/platform` both statically generate.
+- `uv run pytest` — backend health-endpoint test passes.
+- Verified live via Playwright: `/` shows the login form; submitting any credentials navigates to `/platform`, which renders a fresh, empty NDA Creator form with zero console errors; `GET /api/health` returns `{"status":"ok"}` and `prelegal.db` is created fresh on backend startup.
+- `docker compose up --build` itself was **not** verified end-to-end — Docker Desktop's local VM disk hit an I/O error on the dev machine during this work and did not recover after a restart. The Dockerfiles/compose config were reviewed by hand (paths, layer ordering, `EXPOSE`/`CMD`) but should be smoke-tested once Docker Desktop is healthy again.
