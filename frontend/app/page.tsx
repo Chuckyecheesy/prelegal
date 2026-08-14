@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 import NdaCreator from "@/components/NdaCreator";
 
-function loadTemplate(): string {
+// Read once at module load — no per-request disk I/O.
+// Template lives inside frontend/ so process.cwd() is always the right root.
+const TEMPLATE: string = (() => {
   const templatePath = path.join(
     process.cwd(),
-    "..",
     "templates",
     "Mutual-NDA.md"
   );
@@ -14,13 +15,13 @@ function loadTemplate(): string {
   } catch {
     throw new Error(
       `Could not read Mutual NDA template at ${templatePath}. ` +
-        "Ensure the templates/ directory exists at the project root."
+        "Ensure frontend/templates/Mutual-NDA.md exists."
     );
   }
-}
+})();
 
 export default function Home() {
-  const template = loadTemplate();
+  const template = TEMPLATE;
 
   return (
     <main className="min-h-screen bg-gray-50">
