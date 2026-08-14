@@ -1,5 +1,5 @@
-import LoginScreen from "@/components/LoginScreen";
+import AuthScreen from "@/components/AuthScreen";
 
 export default function Home() {
-  return <LoginScreen />;
+  return <AuthScreen />;
 }

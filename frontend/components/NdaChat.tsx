@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NdaFormData } from "@/types/nda";
 import { NDA_FIELD_LABELS, NDA_FIELD_ORDER } from "@/lib/ndaFields";
+import { API_URL } from "@/lib/api";
 
 interface Props {
   onSubmit: (data: NdaFormData) => void;
@@ -12,8 +13,6 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const GREETING =
   "Hi! I'll help you draft a Mutual NDA. Let's start — what's the full legal name of Party A, the party disclosing confidential information?";
