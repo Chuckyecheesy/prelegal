@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import NdaForm from "./NdaForm";
+import NdaChat from "./NdaChat";
 import NdaPreview from "./NdaPreview";
 import type { NdaFormData } from "@/types/nda";
 
@@ -26,7 +26,7 @@ export default function NdaCreator({ template }: Props) {
 
   return (
     <div>
-      {step === "form" && <NdaForm onSubmit={handleFormSubmit} />}
+      {step === "form" && <NdaChat onSubmit={handleFormSubmit} />}
       {step === "preview" && formData && (
         <NdaPreview
           template={template}

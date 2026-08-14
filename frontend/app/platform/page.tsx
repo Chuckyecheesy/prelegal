@@ -25,13 +25,13 @@ export default function PlatformPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="mx-auto max-w-5xl px-4 py-12">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             Mutual NDA Creator
           </h1>
           <p className="mt-2 text-sm text-gray-500">
-            Fill in the details below to generate a Mutual Non-Disclosure
+            Chat with the assistant below to generate a Mutual Non-Disclosure
             Agreement.
           </p>
         </div>
