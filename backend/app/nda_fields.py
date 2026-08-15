@@ -4,6 +4,9 @@ Mirrors `frontend/types/nda.ts`'s `NdaFormData` shape — if that changes, updat
 this too.
 """
 
+# Must match the "name" of the Mutual NDA entry in the root catalog.json.
+NDA_DOCUMENT_TYPE = "Mutual Non-Disclosure Agreement"
+
 NDA_FIELDS: dict[str, str] = {
     "partyAName": "Full legal name of Party A, the disclosing party",
     "partyAAddress": "Mailing address of Party A",

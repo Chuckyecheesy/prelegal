@@ -83,3 +83,49 @@ def test_chat_llm_failure_returns_502(monkeypatch):
         )
 
     assert response.status_code == 502
+
+
+def test_system_prompt_lists_unsupported_catalog_documents():
+    for name in chat_module.OTHER_CATALOG_NAMES:
+        assert name in chat_module.SYSTEM_PROMPT
+    assert "Cloud Service Agreement" in chat_module.SYSTEM_PROMPT
+
+
+def test_system_prompt_requires_offering_nda_alternative():
+    prompt = chat_module.SYSTEM_PROMPT
+    assert "closest document you can generate" in prompt
+    assert "do NOT start collecting NDA fields" in prompt
+
+
+def test_system_prompt_requires_follow_up_question_when_incomplete():
+    prompt = chat_module.SYSTEM_PROMPT
+    assert "MUST end" in prompt
+    assert "Never reply with only an acknowledgement" in prompt
+
+
+def test_chat_sends_system_prompt_to_llm(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    captured = {}
+
+    def _completion(**kwargs):
+        captured["messages"] = kwargs["messages"]
+        message = SimpleNamespace(
+            content=json.dumps({"reply": "What document do you need?", "fields": {}})
+        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    monkeypatch.setattr(chat_module, "completion", _completion)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/chat",
+            json={
+                "messages": [{"role": "user", "content": "I need a DPA"}],
+                "fields": {},
+            },
+        )
+
+    assert response.status_code == 200
+    system_message = captured["messages"][0]
+    assert system_message["role"] == "system"
+    assert chat_module.SYSTEM_PROMPT in system_message["content"]

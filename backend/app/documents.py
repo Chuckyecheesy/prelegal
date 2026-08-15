@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.auth import UserResponse, get_current_user
 from app.db import get_connection
+from app.nda_fields import NDA_DOCUMENT_TYPE
 
 router = APIRouter(prefix="/api/documents")
 
@@ -15,6 +16,7 @@ class SaveDocumentRequest(BaseModel):
 
 class DocumentSummary(BaseModel):
     id: int
+    document_type: str
     party_a_name: str
     party_b_name: str
     created_at: str
@@ -36,14 +38,20 @@ def save_document(
     try:
         cursor = conn.execute(
             """
-            INSERT INTO documents (user_id, party_a_name, party_b_name, fields_json)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO documents (user_id, document_type, party_a_name, party_b_name, fields_json)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (current_user.id, party_a_name, party_b_name, json.dumps(request.fields)),
+            (
+                current_user.id,
+                NDA_DOCUMENT_TYPE,
+                party_a_name,
+                party_b_name,
+                json.dumps(request.fields),
+            ),
         )
         conn.commit()
         row = conn.execute(
-            "SELECT id, party_a_name, party_b_name, fields_json, created_at "
+            "SELECT id, document_type, party_a_name, party_b_name, fields_json, created_at "
             "FROM documents WHERE id = ?",
             (cursor.lastrowid,),
         ).fetchone()
@@ -52,6 +60,7 @@ def save_document(
 
     return DocumentDetail(
         id=row["id"],
+        document_type=row["document_type"],
         party_a_name=row["party_a_name"],
         party_b_name=row["party_b_name"],
         created_at=row["created_at"],
@@ -67,7 +76,7 @@ def list_documents(
     try:
         rows = conn.execute(
             """
-            SELECT id, party_a_name, party_b_name, created_at
+            SELECT id, document_type, party_a_name, party_b_name, created_at
             FROM documents
             WHERE user_id = ?
             ORDER BY created_at DESC, id DESC
@@ -80,6 +89,7 @@ def list_documents(
     return [
         DocumentSummary(
             id=row["id"],
+            document_type=row["document_type"],
             party_a_name=row["party_a_name"],
             party_b_name=row["party_b_name"],
             created_at=row["created_at"],
@@ -97,7 +107,7 @@ def get_document(
     try:
         row = conn.execute(
             """
-            SELECT id, party_a_name, party_b_name, fields_json, created_at
+            SELECT id, document_type, party_a_name, party_b_name, fields_json, created_at
             FROM documents
             WHERE id = ? AND user_id = ?
             """,
@@ -111,6 +121,7 @@ def get_document(
 
     return DocumentDetail(
         id=row["id"],
+        document_type=row["document_type"],
         party_a_name=row["party_a_name"],
         party_b_name=row["party_b_name"],
         created_at=row["created_at"],

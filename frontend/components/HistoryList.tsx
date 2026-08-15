@@ -92,7 +92,8 @@ export default function HistoryList({ onSelect }: Props) {
                 {doc.party_a_name} &amp; {doc.party_b_name}
               </p>
               <p className="mt-0.5 text-xs text-gray-500">
-                Mutual NDA · {new Date(doc.created_at + "Z").toLocaleString()}
+                {doc.document_type} ·{" "}
+                {new Date(doc.created_at + "Z").toLocaleString()}
               </p>
             </div>
             <span className="text-sm font-medium text-indigo-600">

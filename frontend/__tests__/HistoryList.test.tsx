@@ -21,6 +21,7 @@ describe("HistoryList", () => {
         json: async () => [
           {
             id: 1,
+            document_type: "Mutual Non-Disclosure Agreement",
             party_a_name: "Acme Corp.",
             party_b_name: "Beta Inc.",
             created_at: "2026-08-14T12:00:00",
@@ -30,6 +31,9 @@ describe("HistoryList", () => {
     );
     render(<HistoryList onSelect={vi.fn()} />);
     expect(await screen.findByText(/Acme Corp\. & Beta Inc\./)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Mutual Non-Disclosure Agreement/)
+    ).toBeInTheDocument();
   });
 
   it("calls onSelect with the full document when a row is opened", async () => {
