@@ -133,6 +133,19 @@ describe("fillTemplate", () => {
       expect(result).toContain("30");
       expect(result).not.toContain("50");
     });
+
+    it("strips a unit the user included so the template's own unit isn't doubled", () => {
+      const data = {
+        ...BASE_DATA,
+        confidentialityTerm: "3 years",
+        disputeNoticeDays: "30 days",
+      };
+      const result = fillTemplate(MINIMAL_TEMPLATE, data);
+      expect(result).not.toContain("years years");
+      expect(result).not.toContain("days days");
+      const matches = result.match(/\b3 years\b/g);
+      expect(matches).toHaveLength(2);
+    });
   });
 
   describe("Date formatting", () => {
