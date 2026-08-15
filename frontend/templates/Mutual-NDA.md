@@ -98,22 +98,6 @@ Any dispute arising out of or relating to this Agreement shall first be subject 
 
 (e) This Agreement may be executed in counterparts, each of which shall be deemed an original, and all counterparts together shall constitute one and the same instrument.
 
-## 16. Signatures
-
-IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date.
-
-Disclosing Party: [Full Legal Name of Party A]
-By: ______________________________
-Name: ____________________________
-Title: _____________________________
-Date: _____________________________
-
-Receiving Party: [Full Legal Name of Party B]
-By: ______________________________
-Name: ____________________________
-Title: _____________________________
-Date: _____________________________
-
 ---
 
 This Mutual NDA template is provided as a general legal drafting template and should be reviewed by qualified legal counsel before use.

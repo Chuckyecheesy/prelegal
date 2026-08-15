@@ -4,14 +4,27 @@ import { useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { NdaFormData } from "@/types/nda";
 import { fillTemplate } from "@/lib/fillTemplate";
+import type { SaveStatus } from "./NdaCreator";
 
 interface Props {
   template: string;
   data: NdaFormData;
   onBack: () => void;
+  saveStatus?: SaveStatus;
 }
 
-export default function NdaPreview({ template, data, onBack }: Props) {
+const SAVE_STATUS_LABEL: Record<Exclude<SaveStatus, "idle">, string> = {
+  saving: "Saving…",
+  saved: "✓ Saved to history",
+  error: "Couldn't save to history",
+};
+
+export default function NdaPreview({
+  template,
+  data,
+  onBack,
+  saveStatus = "idle",
+}: Props) {
   const documentRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -115,13 +128,32 @@ export default function NdaPreview({ template, data, onBack }: Props) {
         >
           ← Back to Form
         </button>
-        <button
-          onClick={handleDownload}
-          disabled={isDownloading}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {isDownloading ? "Generating PDF…" : "↓ Download PDF"}
-        </button>
+        <div className="flex items-center gap-4">
+          {saveStatus !== "idle" && (
+            <span
+              className={`text-xs font-medium ${
+                saveStatus === "error" ? "text-red-600" : "text-gray-500"
+              }`}
+            >
+              {SAVE_STATUS_LABEL[saveStatus]}
+            </span>
+          )}
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDownloading ? "Generating PDF…" : "↓ Download PDF"}
+          </button>
+        </div>
+      </div>
+
+      {/* Draft disclaimer */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <strong className="font-semibold">Draft only.</strong> This document
+        was generated automatically and should be considered a draft. It is
+        not legal advice — have it reviewed by a licensed attorney before you
+        rely on or sign it.
       </div>
 
       {/* NDA Document */}
