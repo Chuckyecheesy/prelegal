@@ -266,5 +266,17 @@ describe("fillTemplate", () => {
       const result = fillTemplate(realTemplate, BASE_DATA);
       expect((result.match(/## Signatures/g) ?? []).length).toBe(1);
     });
+
+    it("doesn't double the period after a business purpose that already ends in one", () => {
+      const data = {
+        ...BASE_DATA,
+        businessPurpose: "evaluating a potential technology partnership.",
+      };
+      const result = fillTemplate(realTemplate, data);
+      expect(result).not.toContain("..");
+      expect(result).toContain(
+        "evaluating a potential technology partnership. This Agreement governs"
+      );
+    });
   });
 });

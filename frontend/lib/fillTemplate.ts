@@ -40,6 +40,13 @@ function extractNumber(value: string): string {
   return match ? match[0] : value;
 }
 
+// The template's own sentence ends with "[...purpose]. This Agreement..." —
+// if the user's own wording already ends in a period (verbatim-copied), the
+// template's period would double up into "...purpose... This Agreement".
+function stripTrailingPeriod(value: string): string {
+  return value.endsWith(".") ? value.slice(0, -1) : value;
+}
+
 function formatDate(isoDate: string): string {
   // Append time to prevent UTC-offset date shifting
   return new Date(`${isoDate}T00:00:00`).toLocaleDateString("en-US", {
@@ -59,7 +66,7 @@ export function fillTemplate(template: string, data: NdaFormData): string {
     .replaceAll("[Party B Email Address]", data.partyBEmail)
     .replace(
       "[brief description of business purpose or project]",
-      data.businessPurpose
+      stripTrailingPeriod(data.businessPurpose)
     )
     .replace("[Insert date]", formatDate(data.effectiveDate))
     .replace("[State]", data.governingState)
