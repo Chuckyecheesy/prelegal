@@ -15,7 +15,7 @@ interface ChatMessage {
 }
 
 const GREETING =
-  "Hi! I can help you draft a legal document. What kind of document are you looking to create today?";
+  "Hi! I'll help you draft a Mutual NDA. Let's start — what's the full legal name of Party A, the party disclosing confidential information?";
 
 export default function NdaChat({ onSubmit }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -30,17 +30,10 @@ export default function NdaChat({ onSubmit }: Props) {
   );
   const [editValue, setEditValue] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    if (!isLoading) {
-      inputRef.current?.focus();
-    }
-  }, [isLoading]);
 
   const isComplete = NDA_FIELD_ORDER.every(
     (key) => (fields[key] ?? "").trim() !== ""
@@ -128,7 +121,6 @@ export default function NdaChat({ onSubmit }: Props) {
           </label>
           <input
             id="chat-input"
-            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your answer…"

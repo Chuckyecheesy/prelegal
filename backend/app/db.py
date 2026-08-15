@@ -7,11 +7,9 @@ scratch on every startup — no persistence across restarts, no migrations.
 import sqlite3
 from pathlib import Path
 
-from app.nda_fields import NDA_DOCUMENT_TYPE
-
 DB_PATH = Path(__file__).resolve().parent.parent / "prelegal.db"
 
-SCHEMA = f"""
+SCHEMA = """
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
@@ -28,7 +26,6 @@ CREATE TABLE sessions (
 CREATE TABLE documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),
-    document_type TEXT NOT NULL DEFAULT '{NDA_DOCUMENT_TYPE}',
     party_a_name TEXT NOT NULL,
     party_b_name TEXT NOT NULL,
     fields_json TEXT NOT NULL,

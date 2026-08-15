@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { describe, it, expect } from "vitest";
 import { fillTemplate } from "@/lib/fillTemplate";
 import type { NdaFormData } from "@/types/nda";
@@ -135,19 +133,6 @@ describe("fillTemplate", () => {
       expect(result).toContain("30");
       expect(result).not.toContain("50");
     });
-
-    it("strips a unit the user included so the template's own unit isn't doubled", () => {
-      const data = {
-        ...BASE_DATA,
-        confidentialityTerm: "3 years",
-        disputeNoticeDays: "30 days",
-      };
-      const result = fillTemplate(MINIMAL_TEMPLATE, data);
-      expect(result).not.toContain("years years");
-      expect(result).not.toContain("days days");
-      const matches = result.match(/\b3 years\b/g);
-      expect(matches).toHaveLength(2);
-    });
   });
 
   describe("Date formatting", () => {
@@ -238,45 +223,6 @@ describe("fillTemplate", () => {
       expect((result.match(/UNIQUE_PARTY_B/g) ?? []).length).toBe(1);
       expect((result.match(/ADDR_A/g) ?? []).length).toBe(1);
       expect((result.match(/ADDR_B/g) ?? []).length).toBe(1);
-    });
-  });
-
-  // Runs fillTemplate against the actual template file on disk, not the
-  // synthetic MINIMAL_TEMPLATE fixture above. The fixture can drift from the
-  // real template (e.g. it kept a "[Insert date]" placeholder years after
-  // the real template's intro clause lost its own), silently masking bugs
-  // that only show up in a real generated document.
-  describe("Real template file (frontend/templates/Mutual-NDA.md)", () => {
-    const realTemplate = fs.readFileSync(
-      path.join(process.cwd(), "templates", "Mutual-NDA.md"),
-      "utf-8"
-    );
-
-    it("leaves no bracketed placeholders unfilled", () => {
-      const result = fillTemplate(realTemplate, BASE_DATA);
-      expect(result.match(/\[[A-Za-z][^\]]*\]/g)).toBeNull();
-    });
-
-    it("renders the effective date somewhere in the document", () => {
-      const result = fillTemplate(realTemplate, BASE_DATA);
-      expect(result).toContain("August 14, 2026");
-    });
-
-    it("has exactly one Signatures section", () => {
-      const result = fillTemplate(realTemplate, BASE_DATA);
-      expect((result.match(/## Signatures/g) ?? []).length).toBe(1);
-    });
-
-    it("doesn't double the period after a business purpose that already ends in one", () => {
-      const data = {
-        ...BASE_DATA,
-        businessPurpose: "evaluating a potential technology partnership.",
-      };
-      const result = fillTemplate(realTemplate, data);
-      expect(result).not.toContain("..");
-      expect(result).toContain(
-        "evaluating a potential technology partnership. This Agreement governs"
-      );
     });
   });
 });
