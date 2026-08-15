@@ -21,7 +21,9 @@ describe("NdaChat", () => {
 
   it("shows a greeting and all fields as not yet provided", () => {
     render(<NdaChat onSubmit={vi.fn()} />);
-    expect(screen.getByText(/I'll help you draft a Mutual NDA/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/What kind of document are you looking to create/i)
+    ).toBeInTheDocument();
     expect(screen.getAllByText(/Not yet provided/i).length).toBe(12);
   });
 
@@ -54,7 +56,7 @@ describe("NdaChat", () => {
             {
               role: "assistant",
               content:
-                "Hi! I'll help you draft a Mutual NDA. Let's start — what's the full legal name of Party A, the party disclosing confidential information?",
+                "Hi! I can help you draft a legal document. What kind of document are you looking to create today?",
             },
             { role: "user", content: "Acme Corp." },
           ],
@@ -63,6 +65,24 @@ describe("NdaChat", () => {
       })
     );
     expect(screen.getByRole("button", { name: "Acme Corp." })).toBeInTheDocument();
+  });
+
+  it("returns focus to the message input after the assistant replies", async () => {
+    mockFetchOnce({
+      reply: "Great, what's Party A's address?",
+      fields: { partyAName: "Acme Corp." },
+    });
+    const user = userEvent.setup();
+    render(<NdaChat onSubmit={vi.fn()} />);
+
+    const input = screen.getByLabelText(/Message/i);
+    await user.type(input, "Acme Corp.");
+    await user.click(screen.getByRole("button", { name: /Send/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Great, what's Party A's address/i)).toBeInTheDocument()
+    );
+    await waitFor(() => expect(input).toHaveFocus());
   });
 
   it("shows an error message when the request fails", async () => {

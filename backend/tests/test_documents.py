@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.nda_fields import NDA_DOCUMENT_TYPE
 
 SAMPLE_FIELDS = {
     "partyAName": "Acme Corp.",
@@ -31,6 +32,7 @@ def test_save_document_persists_and_returns_it():
     body = response.json()
     assert body["party_a_name"] == "Acme Corp."
     assert body["party_b_name"] == "Beta LLC"
+    assert body["document_type"] == NDA_DOCUMENT_TYPE
     assert body["fields"] == SAMPLE_FIELDS
 
 
@@ -63,6 +65,7 @@ def test_list_documents_returns_saved_documents_newest_first():
     assert response.status_code == 200
     names = [doc["party_a_name"] for doc in response.json()]
     assert names == ["Second Co.", "First Co."]
+    assert all(doc["document_type"] == NDA_DOCUMENT_TYPE for doc in response.json())
 
 
 def test_get_document_returns_full_fields():
@@ -76,6 +79,7 @@ def test_get_document_returns_full_fields():
 
     assert response.status_code == 200
     assert response.json()["fields"] == SAMPLE_FIELDS
+    assert response.json()["document_type"] == NDA_DOCUMENT_TYPE
 
 
 def test_get_document_not_owned_by_user_returns_404():
