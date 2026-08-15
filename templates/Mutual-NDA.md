@@ -1,6 +1,6 @@
 # Mutual Non-Disclosure Agreement
 
-This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of the Effective Date by and between:
+This Mutual Non-Disclosure Agreement ("Agreement") is entered into as of [Insert date] (the "Effective Date") by and between:
 
 - Disclosing Party: [Full Legal Name of Party A]
   Address: [Party A Street Address]
