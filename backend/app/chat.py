@@ -45,17 +45,29 @@ SYSTEM_PROMPT = (
     "acknowledgement (e.g. \"Great, thanks!\") while anything is still missing — "
     "always ask a concrete follow-up question in the same reply.\n\n"
     "Respond with ONLY a JSON object of the form "
-    '{"reply": "<your conversational reply>", "fields": {"<field key>": "<value>"}} '
-    '— include in "fields" every field you can confidently extract from the '
-    "conversation so far (both newly learned this turn and already-known ones), "
+    '{"fields": {"<field key>": "<value>"}, "reply": "<your conversational reply>"} '
+    "— decide \"fields\" FIRST, before writing \"reply\": read the user's latest "
+    "message and include in \"fields\" every field you can confidently extract from "
+    "the conversation so far (both newly learned this turn and already-known ones), "
     "using the exact field keys above. Omit any field you don't know yet, and "
     "leave \"fields\" empty until the user has confirmed they want a Mutual NDA. "
     "Field values MUST be copied verbatim from the user's own messages — exact "
     "wording, spelling, capitalization, and punctuation, character for character. "
     "Never paraphrase, correct, expand, reformat, or normalize a value (e.g. do "
     "not fix casing, spell out abbreviations, or reword an address). If the user "
-    "restates or corrects a field, use their newest exact wording. Do not include "
-    "any text outside the JSON object."
+    "restates or corrects a field, use their newest exact wording. Once you've "
+    "decided \"fields\", write \"reply\" to be consistent with it — never ask about "
+    "anything already present in this turn's \"fields\", even if it was only just "
+    "extracted from the user's latest message. Do not include any text outside the "
+    "JSON object."
+)
+
+DUPLICATE_REPLY_NUDGE = (
+    "Your previous reply repeated an earlier question and ignored new information "
+    "the user already gave. Look again at the user's latest message, update "
+    "\"fields\" accordingly, and write a fresh \"reply\" that does not repeat that "
+    "exact question — acknowledge what you now know and ask about the next "
+    "missing thing instead."
 )
 
 
@@ -74,22 +86,7 @@ class ChatResponse(BaseModel):
     fields: dict[str, str]
 
 
-@router.post("/api/chat", response_model=ChatResponse)
-def chat(request: ChatRequest) -> ChatResponse:
-    if not os.environ.get("OPENROUTER_API_KEY"):
-        raise HTTPException(
-            status_code=500, detail="OPENROUTER_API_KEY is not configured"
-        )
-
-    known_fields = (
-        ", ".join(f"{k}={v}" for k, v in request.fields.items() if v) or "none yet"
-    )
-    system_message = {
-        "role": "system",
-        "content": f"{SYSTEM_PROMPT}\n\nFields captured so far: {known_fields}",
-    }
-    messages = [system_message] + [m.model_dump() for m in request.messages]
-
+def _complete(messages: list[dict[str, str]]) -> tuple[str, dict[str, str]]:
     try:
         response = completion(
             model=MODEL,
@@ -111,5 +108,35 @@ def chat(request: ChatRequest) -> ChatResponse:
     except (json.JSONDecodeError, TypeError, AttributeError):
         reply = content or ""
         fields = {}
+
+    return reply, fields
+
+
+@router.post("/api/chat", response_model=ChatResponse)
+def chat(request: ChatRequest) -> ChatResponse:
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        raise HTTPException(
+            status_code=500, detail="OPENROUTER_API_KEY is not configured"
+        )
+
+    known_fields = (
+        ", ".join(f"{k}={v}" for k, v in request.fields.items() if v) or "none yet"
+    )
+    system_message = {
+        "role": "system",
+        "content": f"{SYSTEM_PROMPT}\n\nFields captured so far: {known_fields}",
+    }
+    conversation = [m.model_dump() for m in request.messages]
+    messages = [system_message] + conversation
+
+    reply, fields = _complete(messages)
+
+    last_assistant_reply = next(
+        (m["content"] for m in reversed(conversation) if m["role"] == "assistant"),
+        None,
+    )
+    if reply and last_assistant_reply and reply.strip() == last_assistant_reply.strip():
+        nudge = {"role": "system", "content": DUPLICATE_REPLY_NUDGE}
+        reply, fields = _complete([*messages, nudge])
 
     return ChatResponse(reply=reply, fields=fields)

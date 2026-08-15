@@ -103,6 +103,83 @@ def test_system_prompt_requires_follow_up_question_when_incomplete():
     assert "Never reply with only an acknowledgement" in prompt
 
 
+def test_chat_retries_once_when_reply_duplicates_last_assistant_message(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    call_count = {"n": 0}
+    responses = [
+        json.dumps(
+            {
+                "reply": "Thanks for the address. Could you share the email address for Party B?",
+                "fields": {},
+            }
+        ),
+        json.dumps(
+            {
+                "reply": "Great, got Party B's email. What's the business purpose?",
+                "fields": {"partyBEmail": "legal@corpus.com"},
+            }
+        ),
+    ]
+
+    def _completion(**kwargs):
+        content = responses[call_count["n"]]
+        call_count["n"] += 1
+        message = SimpleNamespace(content=content)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    monkeypatch.setattr(chat_module, "completion", _completion)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/chat",
+            json={
+                "messages": [
+                    {
+                        "role": "assistant",
+                        "content": "Thanks for the address. Could you share the email address for Party B?",
+                    },
+                    {"role": "user", "content": "legal@corpus.com"},
+                ],
+                "fields": {},
+            },
+        )
+
+    assert response.status_code == 200
+    assert call_count["n"] == 2
+    body = response.json()
+    assert body["reply"] == "Great, got Party B's email. What's the business purpose?"
+    assert body["fields"] == {"partyBEmail": "legal@corpus.com"}
+
+
+def test_chat_does_not_retry_when_reply_is_not_a_duplicate(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    call_count = {"n": 0}
+
+    def _completion(**kwargs):
+        call_count["n"] += 1
+        message = SimpleNamespace(
+            content=json.dumps({"reply": "What's Party A's address?", "fields": {}})
+        )
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    monkeypatch.setattr(chat_module, "completion", _completion)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/chat",
+            json={
+                "messages": [
+                    {"role": "assistant", "content": "What's Party A's name?"},
+                    {"role": "user", "content": "Acme Corp."},
+                ],
+                "fields": {},
+            },
+        )
+
+    assert response.status_code == 200
+    assert call_count["n"] == 1
+
+
 def test_chat_sends_system_prompt_to_llm(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     captured = {}
